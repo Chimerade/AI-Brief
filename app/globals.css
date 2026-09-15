@@ -977,6 +977,9 @@ tbody tr:last-child td {
   padding: 0;
   color: var(--ink);
   box-shadow: -10px 0 90px #162c5720;
+  overflow: hidden;
+  min-width: 0;
+  overscroll-behavior: none;
 }
 .drawer.wide {
   width: 760px;
@@ -990,6 +993,9 @@ tbody tr:last-child td {
   flex-direction: column;
   min-height: 0;
   height: 100%;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 .drawer::backdrop {
   background: #1a2c4966;
@@ -1031,9 +1037,12 @@ tbody tr:last-child td {
 }
 .drawer-body {
   flex: 1;
-  overflow: auto;
+  overflow: hidden auto;
   padding: 23px 32px 30px;
   min-height: 0;
+  min-width: 0;
+  overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
 }
 .timestamp-note {
   font-size: 13px;
@@ -1109,6 +1118,7 @@ tbody tr:last-child td {
   line-height: 1.5;
   border-color: #aab6c7;
   min-width: 0;
+  max-width: 100%;
 }
 .form-grid input::placeholder,
 .block-label textarea::placeholder {
@@ -1133,6 +1143,8 @@ tbody tr:last-child td {
   border: 0;
   padding: 0;
   margin: 0;
+  min-inline-size: 0;
+  max-width: 100%;
 }
 .need-choices {
   display: flex;
@@ -1151,6 +1163,9 @@ tbody tr:last-child td {
   cursor: pointer;
   min-height: 46px;
   border-color: #b8c2d0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .need-choice input {
   accent-color: var(--blue);
@@ -1168,6 +1183,8 @@ tbody tr:last-child td {
   border: 0;
   padding: 0;
   margin: 18px 0;
+  min-inline-size: 0;
+  max-width: 100%;
 }
 .choice-field legend {
   font-size: 15px;
@@ -1193,6 +1210,9 @@ tbody tr:last-child td {
   align-items: center;
   min-height: 46px;
   border-color: #b8c2d0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .choice input {
   margin: 0;
@@ -1514,6 +1534,10 @@ tbody tr:last-child td {
   }
   .drawer-body {
     padding: 20px;
+    overflow: hidden auto;
+    min-width: 0;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
   }
   .drawer-actions {
     padding: 14px 15px;
@@ -1607,4 +1631,16 @@ tbody tr:last-child td {
 .motivation-help {
   margin-top: 12px;
   margin-bottom: 0;
+}
+.drawer-header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .drawer,
+  .drawer.wide {
+    inset-inline: 0;
+    width: 100%;
+    max-width: 100%;
+  }
 }

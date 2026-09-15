@@ -662,9 +662,12 @@ function Modal({
     const previous = document.activeElement as HTMLElement | null;
     ref.current?.showModal();
     const old = document.body.style.overflow;
+    const oldRootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = old;
+      document.documentElement.style.overflow = oldRootOverflow;
       previous?.focus();
     };
   }, []);
