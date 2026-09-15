@@ -36,14 +36,32 @@ export async function PUT(request: Request, context: Context) {
   const denied = checkOrigin(request);
   if (denied) return denied;
   let p;
+  let payload: Record<string, unknown>;
   try {
-    p = validateInput(await request.json());
+    const raw = await request.json();
+    p = validateInput(raw);
+    payload = raw as Record<string, unknown>;
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 400 });
   }
   try {
     const { id } = await context.params;
     const db = await getDb();
+    if (!("motivations" in payload) || !("motivationNotes" in payload)) {
+      const current = await db
+        .prepare("SELECT * FROM prospects WHERE id=?")
+        .bind(id)
+        .first();
+      if (!current)
+        return Response.json(
+          { error: "Prospect introuvable." },
+          { status: 404 },
+        );
+      const existing = fromRow(current);
+      if (!("motivations" in payload)) p.motivations = existing.motivations;
+      if (!("motivationNotes" in payload))
+        p.motivationNotes = existing.motivationNotes;
+    }
     const row = await db
       .prepare(
         `UPDATE prospects SET ${columns.map((c) => c + "=?").join(",")},search_text=?,updated_at=? WHERE id=? RETURNING *`,

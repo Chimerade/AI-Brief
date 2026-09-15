@@ -1,3 +1,17 @@
+export const MOTIVATIONS = [
+  "Gagner du temps / productivité",
+  "Réduire les coûts",
+  "Améliorer la qualité / fiabilité",
+  "Soulager les équipes",
+  "Développer le chiffre d’affaires",
+  "Améliorer le service client",
+  "Rattraper la concurrence",
+  "Se différencier / innover",
+  "Suivre le rythme des évolutions",
+  "Répondre à une demande de la direction",
+  "Comprendre ce que l’IA peut apporter",
+  "Autre",
+] as const;
 export const NEEDS = [
   "Automatisation",
   "Assistant / chatbot",
@@ -44,6 +58,8 @@ export type ProspectInput = {
   company: string;
   email: string;
   phone: string;
+  motivations: string[];
+  motivationNotes: string;
   needs: string[];
   notes: string;
   priority: string;
@@ -74,6 +90,8 @@ export const emptyProspect = (): ProspectInput => ({
   company: "",
   email: "",
   phone: "",
+  motivations: [],
+  motivationNotes: "",
   needs: [],
   notes: "",
   priority: "Moyenne",
@@ -102,6 +120,8 @@ export function searchText(p: ProspectInput) {
       p.notes,
       ...p.needs,
       p.nextAction,
+      ...p.motivations,
+      p.motivationNotes,
     ].join(" "),
   );
 }
@@ -111,13 +131,18 @@ export function validateInput(raw: unknown): ProspectInput {
   const source = raw as Record<string, unknown>;
   const result = emptyProspect();
   for (const key of Object.keys(result) as (keyof ProspectInput)[]) {
-    if (key === "needs") continue;
+    if (key === "needs" || key === "motivations") continue;
+    if (key === "motivationNotes" && source[key] === undefined) continue;
     if (typeof source[key] !== "string")
       throw new Error("Champ invalide : " + key);
     const value = (source[key] as string).trim();
     if (
       value.length >
-      (key === "notes" ? 10000 : key === "nextAction" ? 2000 : 250)
+      (key === "notes" || key === "motivationNotes"
+        ? 10000
+        : key === "nextAction"
+          ? 2000
+          : 250)
     )
       throw new Error("Le champ " + key + " est trop long.");
     result[key] = value;
@@ -155,6 +180,19 @@ export function validateInput(raw: unknown): ProspectInput {
   )
     throw new Error("Les besoins sélectionnés sont invalides.");
   result.needs = [...new Set(source.needs as string[])];
+  const motivations =
+    source.motivations === undefined ? [] : source.motivations;
+  if (
+    !Array.isArray(motivations) ||
+    motivations.length > MOTIVATIONS.length ||
+    motivations.some(
+      (n) =>
+        typeof n !== "string" ||
+        !(MOTIVATIONS as readonly string[]).includes(n),
+    )
+  )
+    throw new Error("Les motivations sélectionnées sont invalides.");
+  result.motivations = [...new Set(motivations as string[])];
   return result;
 }
 export function csvCell(value: unknown) {

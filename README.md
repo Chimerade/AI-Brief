@@ -16,11 +16,12 @@ Ouvrir l’adresse indiquée par le serveur (par défaut http://localhost:3000).
 ## Utilisation
 
 - **Nouveau prospect** : prénom, nom, fonction, société, email, téléphone. Un prénom, un nom ou une société suffit ; les autres renseignements sont facultatifs.
-- **Besoins IA** : cases à cocher multiples et notes libres.
+- **Motivations / enjeux** : productivité, coûts, qualité, concurrence, rythme des évolutions, etc. Cases multiples et zone « Le besoin, avec ses mots » pour noter la difficulté, le déclencheur et le résultat attendu.
+- **Usages IA envisagés** : pistes de solutions facultatives, dans une section distincte. Un prospect peut être qualifié sans connaître l’IA.
 - **Qualification** : priorité, maturité, échéance du projet et budget.
 - **Suivi** : statut, prochaine action et date de relance. La date de relance est un repère visuel ; aucun email ni rappel automatique n’est envoyé.
 - **Enregistrer et suivant** : enregistrer puis ouvrir un formulaire vierge pour le visiteur suivant.
-- **Rechercher** : nom, société, fonction, email, téléphone, besoins, notes principales et prochaine action. Recherche insensible à la casse et aux accents, avec plusieurs mots et filtres cumulables. Pagination de 30 fiches.
+- **Rechercher** : nom, société, fonction, email, téléphone, besoins, notes principales et prochaine action. Recherche insensible à la casse et aux accents, avec plusieurs mots et filtres cumulables, dont les motivations. Les motivations et leur texte libre sont recherchables et exportés. Pagination de 30 fiches.
 - **Fiche détaillée** : cliquer sur un interlocuteur pour consulter, modifier ou supprimer sa fiche. La suppression demande une confirmation et supprime aussi ses passages.
 - **Nouveau passage** : ajouter un échange horodaté avec une note distincte. Modifier une fiche ne crée pas de passage supplémentaire.
 - **Exporter** : CSV des résultats filtrés, sur toutes les pages, compatible Excel (UTF-8 avec BOM, séparateur point-virgule, protection contre les formules).

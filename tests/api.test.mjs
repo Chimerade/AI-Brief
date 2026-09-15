@@ -29,6 +29,11 @@ test("CRUD SQLite, recherche, historique, filtres et export", async () => {
       email: "test@example.invalid",
       phone: "+33612345678",
       needs: ["Automatisation", "Analyse de données"],
+      motivations: [
+        "Gagner du temps / productivité",
+        "Rattraper la concurrence",
+      ],
+      motivationNotes: "Éviter la surcharge des équipes.",
       notes: "Réduire les saisies manuelles\nÉtudier un pilote.",
       priority: "Haute",
       status: "À recontacter",
@@ -43,6 +48,33 @@ test("CRUD SQLite, recherche, historique, filtres et export", async () => {
     const read = await (await request("/api/prospects/" + id)).json();
     assert.equal(read.prospect.firstName, "Élodie");
     assert.equal(read.visits.length, 1);
+    assert.deepEqual(read.prospect.motivations, p.motivations);
+    assert.equal(read.prospect.motivationNotes, p.motivationNotes);
+    const byMotivation = await (
+      await request(
+        "/api/prospects?q=" +
+          encodeURIComponent(p.lastName) +
+          "&motivation=" +
+          encodeURIComponent("Rattraper la concurrence"),
+      )
+    ).json();
+    assert.equal(byMotivation.total, 1);
+    const byWords = await (
+      await request(
+        "/api/prospects?q=" +
+          encodeURIComponent(p.lastName + " eviter surcharge"),
+      )
+    ).json();
+    assert.equal(byWords.total, 1);
+    const mismatch = await (
+      await request(
+        "/api/prospects?q=" +
+          encodeURIComponent(p.lastName) +
+          "&motivation=" +
+          encodeURIComponent("Réduire les coûts"),
+      )
+    ).json();
+    assert.equal(mismatch.total, 0);
     let list = await (
       await request(
         "/api/prospects?q=" +
@@ -78,6 +110,20 @@ test("CRUD SQLite, recherche, historique, filtres et export", async () => {
     assert.equal(updated.prospect.createdAt, firstTime);
     assert.equal(updated.prospect.lastVisitAt, firstTime);
     assert.equal(updated.prospect.company, "Société modifiée");
+    const noSolution = await request("/api/prospects/" + id, "PUT", {
+      ...p,
+      needs: [],
+    });
+    assert.equal(noSolution.status, 200);
+    assert.deepEqual((await noSolution.json()).prospect.needs, []);
+    const legacy = { ...p, company: "Société modifiée" };
+    delete legacy.motivations;
+    delete legacy.motivationNotes;
+    const fromOldTab = await request("/api/prospects/" + id, "PUT", legacy);
+    assert.equal(fromOldTab.status, 200);
+    const preserved = (await fromOldTab.json()).prospect;
+    assert.deepEqual(preserved.motivations, p.motivations);
+    assert.equal(preserved.motivationNotes, p.motivationNotes);
     const added = await request("/api/prospects/" + id + "/visits", "POST", {
       note: "Second passage : démonstration validée.",
     });
@@ -91,7 +137,10 @@ test("CRUD SQLite, recherche, historique, filtres et export", async () => {
     );
     assert.equal(after.prospect.lastVisitAt, after.visits[0].visitedAt);
     const csv = await request(
-      "/api/export?q=" + encodeURIComponent(p.lastName),
+      "/api/export?q=" +
+        encodeURIComponent(p.lastName) +
+        "&motivation=" +
+        encodeURIComponent("Rattraper la concurrence"),
     );
     assert.equal(csv.status, 200);
     assert.match(csv.headers.get("content-type"), /text\/csv/);
@@ -99,6 +148,18 @@ test("CRUD SQLite, recherche, historique, filtres et export", async () => {
     assert.match(text, /Société modifiée/);
     assert.match(text, /'\+33612345678/);
     assert.match(text, /Nombre de passages/);
+    assert.match(text, /Motivations \/ enjeux/);
+    assert.match(text, /Rattraper la concurrence/);
+    assert.match(text, /Éviter la surcharge des équipes/);
+    const clear = await request("/api/prospects/" + id, "PUT", {
+      ...p,
+      motivations: [],
+      motivationNotes: "",
+    });
+    assert.equal(clear.status, 200);
+    const cleared = (await clear.json()).prospect;
+    assert.deepEqual(cleared.motivations, []);
+    assert.equal(cleared.motivationNotes, "");
     const deleted = await request("/api/prospects/" + id, "DELETE");
     assert.equal(deleted.status, 204);
     assert.equal((await request("/api/prospects/" + id)).status, 404);

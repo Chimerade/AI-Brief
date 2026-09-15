@@ -1595,3 +1595,16 @@ tbody tr:last-child td {
     display: none;
   }
 }
+
+.motivation-tag {
+  background: #eef5ef;
+  border-color: #d1e2d5;
+  color: #385b42;
+}
+.drawer .motivation-tag {
+  color: #385b42;
+}
+.motivation-help {
+  margin-top: 12px;
+  margin-bottom: 0;
+}

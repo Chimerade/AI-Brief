@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   NEEDS,
+  MOTIVATIONS,
   STATUSES,
   PRIORITIES,
   MATURITIES,
@@ -82,6 +83,7 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [need, setNeed] = useState("");
+  const [motivation, setMotivation] = useState("");
   const [page, setPage] = useState(1);
   const [revision, setRevision] = useState(0);
   const [editor, setEditor] = useState<Prospect | "new" | null>(null);
@@ -109,8 +111,9 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [notice]);
   const params = useCallback(
-    () => new URLSearchParams({ q: debounced, status, priority, need }),
-    [debounced, status, priority, need],
+    () =>
+      new URLSearchParams({ q: debounced, status, priority, need, motivation }),
+    [debounced, status, priority, need, motivation],
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -152,6 +155,7 @@ export default function Home() {
     setStatus(mode === "follow" ? "À recontacter" : "");
     setPriority(mode === "hot" ? "Haute" : "");
     setNeed("");
+    setMotivation("");
     setQuery("");
     setDebounced("");
     setPage(1);
@@ -185,7 +189,7 @@ export default function Home() {
       : status === "À recontacter"
         ? "follow"
         : "all";
-  const filtered = !!(query || status || priority || need);
+  const filtered = !!(query || status || priority || need || motivation);
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -351,11 +355,21 @@ export default function Home() {
                 ))}
               </select>
               <select
+                value={motivation}
+                onChange={(e) => filter(setMotivation, e.target.value)}
+                aria-label="Filtrer par motivation"
+              >
+                <option value="">Tous les enjeux</option>
+                {MOTIVATIONS.map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+              <select
                 value={need}
                 onChange={(e) => filter(setNeed, e.target.value)}
-                aria-label="Filtrer par besoin IA"
+                aria-label="Filtrer par usage IA"
               >
-                <option value="">Tous les besoins IA</option>
+                <option value="">Tous les usages IA</option>
                 {NEEDS.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
@@ -378,7 +392,7 @@ export default function Home() {
                   <tr>
                     <th>INTERLOCUTEUR</th>
                     <th>SOCIÉTÉ</th>
-                    <th>BESOINS IA</th>
+                    <th>ENJEUX / USAGES IA</th>
                     <th>PRIORITÉ</th>
                     <th>STATUT</th>
                     <th>DERNIER PASSAGE</th>
@@ -412,6 +426,19 @@ export default function Home() {
                       </td>
                       <td>
                         <div className="tags">
+                          {p.motivations.slice(0, 2).map((m) => (
+                            <span className="tag motivation-tag" key={m}>
+                              {m}
+                            </span>
+                          ))}
+                          {p.motivations.length > 2 && (
+                            <span
+                              className="tag motivation-tag"
+                              title={p.motivations.slice(2).join(", ")}
+                            >
+                              +{p.motivations.length - 2} enjeux
+                            </span>
+                          )}
                           {p.needs.slice(0, 2).map((n) => (
                             <span key={n} className="tag">
                               {n}
@@ -425,7 +452,7 @@ export default function Home() {
                               +{p.needs.length - 2}
                             </span>
                           )}
-                          {!p.needs.length && (
+                          {!p.needs.length && !p.motivations.length && (
                             <span className="muted">À explorer</span>
                           )}
                         </div>
@@ -881,13 +908,67 @@ function ProspectEditor({
             </section>
             <section className="form-section">
               <h3>
-                <span>02</span> Les besoins en IA
+                <span>02</span> Ce qui motive la démarche
               </h3>
               <p className="section-help">
-                Plusieurs sujets peuvent se croiser. Cochez ce qui ressort.
+                Qu’est-ce que l’entreprise veut vraiment améliorer ? Cochez les
+                motivations exprimées, même sans idée précise de solution IA.
               </p>
               <fieldset className="needs-field">
-                <legend className="sr-only">Besoins discutés</legend>
+                <legend className="sr-only">
+                  Motivations et enjeux de l’entreprise
+                </legend>
+                <div className="need-choices">
+                  {MOTIVATIONS.map((m) => (
+                    <label
+                      key={m}
+                      className={
+                        "need-choice " +
+                        (form.motivations.includes(m) ? "selected" : "")
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.motivations.includes(m)}
+                        onChange={(e) =>
+                          change(
+                            "motivations",
+                            e.target.checked
+                              ? [...form.motivations, m]
+                              : form.motivations.filter((v) => v !== m),
+                          )
+                        }
+                      />
+                      {m}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <label className="block-label">
+                Le besoin, avec ses mots
+                <textarea
+                  value={form.motivationNotes}
+                  onChange={(e) => change("motivationNotes", e.target.value)}
+                  rows={4}
+                  maxLength={10000}
+                  placeholder="Qu’est-ce qui vous freine aujourd’hui ? Pourquoi vous y intéresser maintenant ? Quel changement concret espérez-vous ?"
+                />
+              </label>
+              <p className="section-help motivation-help">
+                Ex. : « On perd trop de temps à ressaisir », « Nos concurrents
+                s’y mettent », « Je dois comprendre par où commencer ».
+              </p>
+            </section>
+            <section className="form-section">
+              <h3>
+                <span>03</span> Les usages IA envisagés
+              </h3>
+              <p className="section-help">
+                Facultatif : à compléter si des pistes ont été évoquées. Le
+                besoin peut être enregistré sans choisir de solution.
+              </p>
+              <fieldset className="needs-field">
+                <legend className="sr-only">Usages IA envisagés</legend>
                 <div className="need-choices">
                   {NEEDS.map((n) => (
                     <label
@@ -915,19 +996,19 @@ function ProspectEditor({
                 </div>
               </fieldset>
               <label className="block-label">
-                Notes de l’échange
+                Notes complémentaires sur les usages
                 <textarea
                   value={form.notes}
                   onChange={(e) => change("notes", e.target.value)}
                   rows={4}
                   maxLength={10000}
-                  placeholder="Quel problème cherche-t-on à résoudre ? Processus actuel, attentes, contraintes, outils utilisés…"
+                  placeholder="Pistes évoquées, processus concernés, outils utilisés, contraintes…"
                 />
               </label>
             </section>
             <section className="form-section">
               <h3>
-                <span>03</span> Qualifier l’opportunité
+                <span>04</span> Qualifier l’opportunité
               </h3>
               <Choices
                 label="Priorité"
@@ -968,7 +1049,7 @@ function ProspectEditor({
             </section>
             <section className="form-section">
               <h3>
-                <span>04</span> Et après le salon ?
+                <span>05</span> Et après le salon ?
               </h3>
               <div className="form-grid">
                 <label>
@@ -1191,7 +1272,25 @@ function ProspectDetail({
           </span>
         </div>
         <section className="detail-section">
-          <h3>Besoins en IA</h3>
+          <h3>Ce qui motive la démarche</h3>
+          <div className="tags">
+            {record.motivations.length ? (
+              record.motivations.map((m) => (
+                <span className="tag motivation-tag" key={m}>
+                  {m}
+                </span>
+              ))
+            ) : (
+              <span className="muted">Les motivations restent à explorer.</span>
+            )}
+          </div>
+          <p className="notes-text">
+            {record.motivationNotes ||
+              "Le besoin n’a pas encore été formulé avec ses mots."}
+          </p>
+        </section>
+        <section className="detail-section">
+          <h3>Usages IA envisagés</h3>
           <div className="tags">
             {record.needs.length ? (
               record.needs.map((n) => (
@@ -1200,7 +1299,9 @@ function ProspectDetail({
                 </span>
               ))
             ) : (
-              <span className="muted">Les besoins restent à explorer.</span>
+              <span className="muted">
+                Aucune piste de solution évoquée pour le moment.
+              </span>
             )}
           </div>
           <p className="notes-text">

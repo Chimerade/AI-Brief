@@ -9,6 +9,8 @@ export const prospects = sqliteTable(
     company: text("company").notNull(),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
+    motivations: text("motivations").notNull().default("[]"),
+    motivationNotes: text("motivation_notes").notNull().default(""),
     needs: text("needs").notNull(),
     notes: text("notes").notNull(),
     priority: text("priority").notNull(),

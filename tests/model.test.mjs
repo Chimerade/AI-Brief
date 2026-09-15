@@ -45,3 +45,33 @@ test("CSV : échappement, multilignes et protection contre les formules", () => 
   assert.equal(csvCell("+33612345678"), '"\'+33612345678"');
   assert.equal(csvCell(" @SUM(A1)"), '"\' @SUM(A1)"');
 });
+
+test("Qualification par motivation sans solution IA identifiée", () => {
+  const p = validateInput({
+    ...emptyProspect(),
+    company: "PME",
+    motivations: [
+      "Rattraper la concurrence",
+      "Suivre le rythme des évolutions",
+      "Rattraper la concurrence",
+    ],
+    motivationNotes: "La direction veut comprendre les possibilités.",
+  });
+  assert.deepEqual(p.needs, []);
+  assert.equal(p.motivations.length, 2);
+  assert.match(searchText(p), /rattraper la concurrence/);
+  assert.match(searchText(p), /comprendre les possibilites/);
+  for (const value of [null, "Productivité", ["Inconnu"]])
+    assert.throws(() => validateInput({ ...p, motivations: value }));
+  assert.throws(() =>
+    validateInput({ ...p, motivationNotes: "x".repeat(10001) }),
+  );
+});
+test("Un ancien formulaire reste accepté avec des motivations vides par défaut", () => {
+  const old = { ...emptyProspect(), company: "Ancien formulaire" };
+  delete old.motivations;
+  delete old.motivationNotes;
+  const result = validateInput(old);
+  assert.deepEqual(result.motivations, []);
+  assert.equal(result.motivationNotes, "");
+});

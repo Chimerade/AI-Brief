@@ -21,6 +21,8 @@ export const fields = [
   "budget",
   "nextAction",
   "followUpDate",
+  "motivations",
+  "motivationNotes",
 ] as const;
 export const columns = [
   "first_name",
@@ -38,6 +40,8 @@ export const columns = [
   "budget",
   "next_action",
   "follow_up_date",
+  "motivations",
+  "motivation_notes",
 ];
 let ready: Promise<unknown> | undefined;
 export async function getDb() {
@@ -48,7 +52,7 @@ export async function getDb() {
     ready = db
       .batch([
         db.prepare(
-          `CREATE TABLE IF NOT EXISTS prospects (id TEXT PRIMARY KEY NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, role TEXT NOT NULL, company TEXT NOT NULL, email TEXT NOT NULL, phone TEXT NOT NULL, needs TEXT NOT NULL, notes TEXT NOT NULL, priority TEXT NOT NULL, status TEXT NOT NULL, maturity TEXT NOT NULL, timeline TEXT NOT NULL, budget TEXT NOT NULL, next_action TEXT NOT NULL, follow_up_date TEXT NOT NULL, search_text TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_visit_at TEXT NOT NULL, visit_count INTEGER NOT NULL DEFAULT 1)`,
+          `CREATE TABLE IF NOT EXISTS prospects (id TEXT PRIMARY KEY NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, role TEXT NOT NULL, company TEXT NOT NULL, email TEXT NOT NULL, phone TEXT NOT NULL, needs TEXT NOT NULL, notes TEXT NOT NULL, priority TEXT NOT NULL, status TEXT NOT NULL, maturity TEXT NOT NULL, timeline TEXT NOT NULL, budget TEXT NOT NULL, next_action TEXT NOT NULL, follow_up_date TEXT NOT NULL, search_text TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_visit_at TEXT NOT NULL, visit_count INTEGER NOT NULL DEFAULT 1, motivations TEXT NOT NULL DEFAULT '[]', motivation_notes TEXT NOT NULL DEFAULT '')`,
         ),
         db.prepare(
           `CREATE TABLE IF NOT EXISTS visits (id TEXT PRIMARY KEY NOT NULL, prospect_id TEXT NOT NULL REFERENCES prospects(id) ON DELETE CASCADE, visited_at TEXT NOT NULL, note TEXT NOT NULL)`,
@@ -67,6 +71,27 @@ export async function getDb() {
         ),
         db.prepare("PRAGMA optimize"),
       ])
+      .then(async () => {
+        // Upgrade existing local previews; hosted databases receive the Drizzle migration.
+        const info = await db
+          .prepare("PRAGMA table_info(prospects)")
+          .all<{ name: string }>();
+        const names = new Set(info.results.map((column) => column.name));
+        const migrations = [];
+        if (!names.has("motivations"))
+          migrations.push(
+            db.prepare(
+              "ALTER TABLE prospects ADD COLUMN motivations TEXT NOT NULL DEFAULT '[]'",
+            ),
+          );
+        if (!names.has("motivation_notes"))
+          migrations.push(
+            db.prepare(
+              "ALTER TABLE prospects ADD COLUMN motivation_notes TEXT NOT NULL DEFAULT ''",
+            ),
+          );
+        if (migrations.length) await db.batch(migrations);
+      })
       .catch((e: unknown) => {
         ready = undefined;
         throw e;
@@ -76,7 +101,9 @@ export async function getDb() {
 }
 export function values(p: ProspectInput) {
   return [
-    ...fields.map((f) => (f === "needs" ? JSON.stringify(p.needs) : p[f])),
+    ...fields.map((f) =>
+      f === "needs" || f === "motivations" ? JSON.stringify(p[f]) : p[f],
+    ),
     searchText(p),
   ];
 }
@@ -89,7 +116,10 @@ export function fromRow(row: Record<string, unknown>): Prospect {
     visitCount: row.visit_count,
   };
   fields.forEach((f, i) => {
-    result[f] = f === "needs" ? JSON.parse(String(row.needs)) : row[columns[i]];
+    result[f] =
+      f === "needs" || f === "motivations"
+        ? JSON.parse(String(row[columns[i]] ?? "[]"))
+        : row[columns[i]];
   });
   return result as Prospect;
 }
@@ -110,6 +140,13 @@ export function whereFilters(params: URLSearchParams) {
   if (need) {
     clauses.push("needs LIKE ? ESCAPE '\\'");
     bindings.push("%" + JSON.stringify(need).replace(/[\\%_]/g, "\\$&") + "%");
+  }
+  const motivation = params.get("motivation");
+  if (motivation) {
+    clauses.push(
+      "EXISTS (SELECT 1 FROM json_each(prospects.motivations) WHERE value = ?)",
+    );
+    bindings.push(motivation);
   }
   return {
     sql: clauses.length ? " WHERE " + clauses.join(" AND ") : "",
